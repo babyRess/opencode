@@ -83,6 +83,14 @@ export type EventLspUpdated = {
   }
 }
 
+export type EventFileWatcherUpdated = {
+  type: "file.watcher.updated"
+  properties: {
+    file: string
+    event: "add" | "change" | "unlink"
+  }
+}
+
 export type EventFileEdited = {
   type: "file.edited"
   properties: {
@@ -630,14 +638,6 @@ export type EventSessionCompacted = {
   }
 }
 
-export type EventFileWatcherUpdated = {
-  type: "file.watcher.updated"
-  properties: {
-    file: string
-    event: "add" | "change" | "unlink"
-  }
-}
-
 export type Todo = {
   /**
    * Brief description of the task
@@ -893,6 +893,7 @@ export type Event =
   | EventGlobalDisposed
   | EventLspClientDiagnostics
   | EventLspUpdated
+  | EventFileWatcherUpdated
   | EventFileEdited
   | EventMessageUpdated
   | EventMessageRemoved
@@ -906,7 +907,6 @@ export type Event =
   | EventQuestionReplied
   | EventQuestionRejected
   | EventSessionCompacted
-  | EventFileWatcherUpdated
   | EventTodoUpdated
   | EventTuiPromptAppend
   | EventTuiCommandExecute
@@ -2169,6 +2169,27 @@ export type LspStatus = {
   name: string
   root: string
   status: "connected" | "error"
+}
+
+export type CompletionItem = {
+  label: string
+  kind?: number
+  detail?: string
+  documentation?:
+    | string
+    | {
+        kind: string
+        value: string
+      }
+  sortText?: string
+  filterText?: string
+  insertText?: string
+  insertTextFormat?: number
+}
+
+export type TextEdit = {
+  range: Range
+  newText: string
 }
 
 export type FormatterStatus = {
@@ -4237,6 +4258,29 @@ export type FileReadResponses = {
 
 export type FileReadResponse = FileReadResponses[keyof FileReadResponses]
 
+export type FileWriteData = {
+  body?: {
+    path: string
+    content: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/file/content"
+}
+
+export type FileWriteResponses = {
+  /**
+   * Write result
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type FileWriteResponse = FileWriteResponses[keyof FileWriteResponses]
+
 export type FileStatusData = {
   body?: never
   path?: never
@@ -4957,6 +5001,160 @@ export type LspStatusResponses = {
 }
 
 export type LspStatusResponse = LspStatusResponses[keyof LspStatusResponses]
+
+export type LspCompletionData = {
+  body?: {
+    /**
+     * File path
+     */
+    file: string
+    /**
+     * Line number (0-indexed)
+     */
+    line: number
+    /**
+     * Character position (0-indexed)
+     */
+    character: number
+    /**
+     * Current editor content for LSP sync
+     */
+    content?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/lsp/completion"
+}
+
+export type LspCompletionErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type LspCompletionError = LspCompletionErrors[keyof LspCompletionErrors]
+
+export type LspCompletionResponses = {
+  /**
+   * Completion items
+   */
+  200: Array<CompletionItem>
+}
+
+export type LspCompletionResponse = LspCompletionResponses[keyof LspCompletionResponses]
+
+export type LspFormatData = {
+  body?: {
+    /**
+     * File path
+     */
+    file: string
+    options?: {
+      tabSize?: number
+      insertSpaces?: boolean
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/lsp/format"
+}
+
+export type LspFormatErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type LspFormatError = LspFormatErrors[keyof LspFormatErrors]
+
+export type LspFormatResponses = {
+  /**
+   * Text edits to apply
+   */
+  200: Array<TextEdit>
+}
+
+export type LspFormatResponse = LspFormatResponses[keyof LspFormatResponses]
+
+export type LspFormatRangeData = {
+  body?: {
+    /**
+     * File path
+     */
+    file: string
+    range: Range
+    options?: {
+      tabSize?: number
+      insertSpaces?: boolean
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/lsp/format-range"
+}
+
+export type LspFormatRangeErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type LspFormatRangeError = LspFormatRangeErrors[keyof LspFormatRangeErrors]
+
+export type LspFormatRangeResponses = {
+  /**
+   * Text edits to apply
+   */
+  200: Array<TextEdit>
+}
+
+export type LspFormatRangeResponse = LspFormatRangeResponses[keyof LspFormatRangeResponses]
+
+export type LspDiagnosticsData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    /**
+     * File path
+     */
+    file: string
+  }
+  url: "/lsp/diagnostics"
+}
+
+export type LspDiagnosticsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type LspDiagnosticsError = LspDiagnosticsErrors[keyof LspDiagnosticsErrors]
+
+export type LspDiagnosticsResponses = {
+  /**
+   * Diagnostics for the file
+   */
+  200: Array<{
+    range: Range
+    message: string
+    severity?: number
+    source?: string
+    code?: string | number
+  }>
+}
+
+export type LspDiagnosticsResponse = LspDiagnosticsResponses[keyof LspDiagnosticsResponses]
 
 export type FormatterStatusData = {
   body?: never

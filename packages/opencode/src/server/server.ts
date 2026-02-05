@@ -453,6 +453,158 @@ export namespace Server {
             return c.json(await LSP.status())
           },
         )
+        .post(
+          "/lsp/completion",
+          describeRoute({
+            summary: "Get completions",
+            description: "Get code completions at a position in a file",
+            operationId: "lsp.completion",
+            responses: {
+              200: {
+                description: "Completion items",
+                content: {
+                  "application/json": {
+                    schema: resolver(LSP.CompletionItem.array()),
+                  },
+                },
+              },
+              ...errors(400),
+            },
+          }),
+          validator(
+            "json",
+            z.object({
+              file: z.string().meta({ description: "File path" }),
+              line: z.number().meta({ description: "Line number (0-indexed)" }),
+              character: z.number().meta({ description: "Character position (0-indexed)" }),
+              content: z.string().optional().meta({ description: "Current editor content for LSP sync" }),
+            }),
+          ),
+          async (c) => {
+            const { file, line, character, content } = c.req.valid("json")
+            await LSP.touchFile(file, false, content)
+            const completions = await LSP.completion({ file, line, character })
+            return c.json(completions)
+          },
+        )
+        .post(
+          "/lsp/format",
+          describeRoute({
+            summary: "Format document",
+            description: "Format an entire document using LSP",
+            operationId: "lsp.format",
+            responses: {
+              200: {
+                description: "Text edits to apply",
+                content: {
+                  "application/json": {
+                    schema: resolver(LSP.TextEdit.array()),
+                  },
+                },
+              },
+              ...errors(400),
+            },
+          }),
+          validator(
+            "json",
+            z.object({
+              file: z.string().meta({ description: "File path" }),
+              options: z
+                .object({
+                  tabSize: z.number().optional(),
+                  insertSpaces: z.boolean().optional(),
+                })
+                .optional(),
+            }),
+          ),
+          async (c) => {
+            const { file, options } = c.req.valid("json")
+            await LSP.touchFile(file)
+            const edits = await LSP.format({ file, options })
+            return c.json(edits)
+          },
+        )
+        .post(
+          "/lsp/format-range",
+          describeRoute({
+            summary: "Format range",
+            description: "Format a range within a document using LSP",
+            operationId: "lsp.formatRange",
+            responses: {
+              200: {
+                description: "Text edits to apply",
+                content: {
+                  "application/json": {
+                    schema: resolver(LSP.TextEdit.array()),
+                  },
+                },
+              },
+              ...errors(400),
+            },
+          }),
+          validator(
+            "json",
+            z.object({
+              file: z.string().meta({ description: "File path" }),
+              range: LSP.Range.meta({ description: "Range to format" }),
+              options: z
+                .object({
+                  tabSize: z.number().optional(),
+                  insertSpaces: z.boolean().optional(),
+                })
+                .optional(),
+            }),
+          ),
+          async (c) => {
+            const { file, range, options } = c.req.valid("json")
+            await LSP.touchFile(file)
+            const edits = await LSP.formatRange({ file, range, options })
+            return c.json(edits)
+          },
+        )
+        .get(
+          "/lsp/diagnostics",
+          describeRoute({
+            summary: "Get diagnostics",
+            description: "Get diagnostics for a file",
+            operationId: "lsp.diagnostics",
+            responses: {
+              200: {
+                description: "Diagnostics for the file",
+                content: {
+                  "application/json": {
+                    schema: resolver(
+                      z.array(
+                        z.object({
+                          range: LSP.Range,
+                          message: z.string(),
+                          severity: z.number().optional(),
+                          source: z.string().optional(),
+                          code: z.union([z.string(), z.number()]).optional(),
+                        }),
+                      ),
+                    ),
+                  },
+                },
+              },
+              ...errors(400),
+            },
+          }),
+          validator(
+            "query",
+            z.object({
+              directory: z.string().optional(),
+              file: z.string().meta({ description: "File path" }),
+            }),
+          ),
+          async (c) => {
+            const { file } = c.req.valid("query")
+            await LSP.touchFile(file, true)
+            const allDiagnostics = await LSP.diagnostics()
+            const fileDiagnostics = allDiagnostics[file] ?? []
+            return c.json(fileDiagnostics)
+          },
+        )
         .get(
           "/formatter",
           describeRoute({

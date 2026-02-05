@@ -30,6 +30,7 @@ import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { Tabs } from "@opencode-ai/ui/tabs"
 import { Select } from "@opencode-ai/ui/select"
 import { useCodeComponent } from "@opencode-ai/ui/context/code"
+import { useEditorComponent } from "@opencode-ai/ui/context/editor"
 import { LineComment as LineCommentView, LineCommentEditor } from "@opencode-ai/ui/line-comment"
 import { SessionTurn } from "@opencode-ai/ui/session-turn"
 import { BasicTool } from "@opencode-ai/ui/basic-tool"
@@ -261,6 +262,7 @@ export default function Page() {
   const terminal = useTerminal()
   const dialog = useDialog()
   const codeComponent = useCodeComponent()
+  const editorComponent = useEditorComponent()
   const command = useCommand()
   const language = useLanguage()
   const params = useParams()
@@ -3092,7 +3094,104 @@ export default function Page() {
                             requestAnimationFrame(() => comments.clearFocus())
                           })
 
-                          const renderCode = (source: string, wrapperClass: string) => (
+                          const [editMode, setEditMode] = createSignal(false)
+                          const [editedContent, setEditedContent] = createSignal<string | null>(null)
+                          const [showSaveDialog, setShowSaveDialog] = createSignal(false)
+
+                          // Track the content when entering edit mode
+                          const [initialContent, setInitialContent] = createSignal<string>("")
+
+                          // Handle entering/leaving edit mode
+                          const enterEditMode = () => {
+                            setInitialContent(contents())
+                            setEditedContent(null)
+                            setEditMode(true)
+                          }
+
+                          const leaveEditMode = () => {
+                            setEditedContent(null)
+                            setEditMode(false)
+                          }
+
+                          // Handle value change from editor
+                          const handleEditorValueChange = (value: string) => {
+                            // Always track the current editor content
+                            setEditedContent(value)
+                          }
+
+                          // Check if content has been modified
+                          const isDirty = createMemo(() => {
+                            const edited = editedContent()
+                            if (edited === null) return false
+                            return edited !== initialContent()
+                          })
+
+                          // Sync dirty state to file context for tab indicator
+                          createEffect(() => {
+                            const p = path()
+                            if (!p) return
+                            file.setDirty(p, isDirty())
+                          })
+
+                          // Handle save - call SDK file.write()
+                          const handleSave = async (content: string) => {
+                            const p = path()
+                            if (!p) return
+
+                            try {
+                              await sdk.client.file.write({ path: p, content })
+                              // Update initial content to match saved content
+                              // This makes isDirty() return false
+                              setInitialContent(content)
+                              file.clearDirty(p)
+                              // Reload file to get fresh content from server
+                              file.load(p, { force: true })
+                              showToast({
+                                title: "File saved",
+                                variant: "success",
+                              })
+                            } catch (err) {
+                              const message = err instanceof Error ? err.message : String(err)
+                              showToast({
+                                title: "Failed to save file",
+                                description: message,
+                                variant: "error",
+                              })
+                            }
+                          }
+
+                          // Handle mode switch with unsaved changes check
+                          const handleModeSwitch = (toEditMode: boolean) => {
+                            if (toEditMode) {
+                              enterEditMode()
+                              return
+                            }
+
+                            // Switching from EDIT to VIEW
+                            if (isDirty()) {
+                              setShowSaveDialog(true)
+                              return
+                            }
+
+                            leaveEditMode()
+                          }
+
+                          // Save dialog actions
+                          const handleSaveAndSwitch = async () => {
+                            const content = editedContent()
+                            if (content !== null) {
+                              await handleSave(content)
+                            }
+                            setShowSaveDialog(false)
+                            leaveEditMode()
+                          }
+
+                          const handleDiscardAndSwitch = () => {
+                            setShowSaveDialog(false)
+                            leaveEditMode()
+                          }
+
+                          const renderCode = (getSource: () => string, wrapperClass: string) => (
                             <div
                               ref={(el) => {
                                 wrap = el
@@ -3100,38 +3199,122 @@ export default function Page() {
                               }}
                               class={`relative overflow-hidden ${wrapperClass}`}
                             >
-                              <Dynamic
-                                component={codeComponent}
-                                file={{
-                                  name: path() ?? "",
-                                  contents: source,
-                                  cacheKey: cacheKey(),
-                                }}
-                                enableLineSelection
-                                selectedLines={selectedLines()}
-                                commentedLines={commentedLines()}
-                                onRendered={() => {
-                                  requestAnimationFrame(restoreScroll)
-                                  requestAnimationFrame(scheduleComments)
-                                }}
-                                onLineSelected={(range: SelectedLineRange | null) => {
-                                  const p = path()
-                                  if (!p) return
-                                  file.setSelectedLines(p, range)
-                                  if (!range) setCommenting(null)
-                                }}
-                                onLineSelectionEnd={(range: SelectedLineRange | null) => {
-                                  if (!range) {
-                                    setCommenting(null)
-                                    return
-                                  }
+                              {/* Save dialog for unsaved changes */}
+                              <Show when={showSaveDialog()}>
+                                <div class="absolute inset-0 z-20 flex items-center justify-center bg-background-base/80">
+                                  <div class="bg-background-base border border-border-base rounded-lg p-4 shadow-lg max-w-sm">
+                                    <h3 class="text-14-medium text-text-strong mb-2">Unsaved Changes</h3>
+                                    <p class="text-13-regular text-text-base mb-4">
+                                      You have unsaved changes. Do you want to save them before switching to view mode?
+                                    </p>
+                                    <div class="flex justify-end gap-2">
+                                      <Button variant="ghost" size="small" onClick={() => setShowSaveDialog(false)}>
+                                        Cancel
+                                      </Button>
+                                      <Button variant="secondary" size="small" onClick={handleDiscardAndSwitch}>
+                                        Discard
+                                      </Button>
+                                      <Button variant="primary" size="small" onClick={handleSaveAndSwitch}>
+                                        Save
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </Show>
 
-                                  setOpenedComment(null)
-                                  setCommenting(range)
-                                }}
-                                overflow="scroll"
-                                class="select-text"
-                              />
+                              {/* Mode toggle - Segmented Control */}
+                              <div class="absolute top-2 right-2 z-10 flex items-center gap-2">
+                                {/* Dirty indicator */}
+                                <Show when={isDirty()}>
+                                  <span class="text-14-medium text-text-interactive-base" title="Unsaved changes">
+                                    •
+                                  </span>
+                                </Show>
+                                <div
+                                  class="flex items-center rounded border border-border-base overflow-hidden"
+                                  role="radiogroup"
+                                  aria-label="Editor mode"
+                                >
+                                  <button
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={!editMode()}
+                                    class="px-2 py-1 text-12-medium transition-colors cursor-pointer"
+                                    classList={{
+                                      "bg-button-secondary-base text-text-strong": !editMode(),
+                                      "bg-transparent text-text-weak hover:bg-surface-base-hover": editMode(),
+                                    }}
+                                    onClick={() => editMode() && handleModeSwitch(false)}
+                                  >
+                                    VIEW
+                                  </button>
+                                  <button
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={editMode()}
+                                    class="px-2 py-1 text-12-medium transition-colors cursor-pointer"
+                                    classList={{
+                                      "bg-button-secondary-base text-text-interactive-base": editMode(),
+                                      "bg-transparent text-text-weak hover:bg-surface-base-hover": !editMode(),
+                                    }}
+                                    onClick={() => !editMode() && handleModeSwitch(true)}
+                                  >
+                                    EDIT
+                                  </button>
+                                </div>
+                                <span class="text-12-regular text-text-weak" aria-hidden="true">
+                                  ⌘E
+                                </span>
+                              </div>
+
+                              <Show
+                                when={editMode()}
+                                fallback={
+                                  <Dynamic
+                                    component={codeComponent}
+                                    file={{
+                                      name: path() ?? "",
+                                      contents: getSource(),
+                                      cacheKey: cacheKey(),
+                                    }}
+                                    enableLineSelection
+                                    selectedLines={selectedLines()}
+                                    commentedLines={commentedLines()}
+                                    onRendered={() => {
+                                      requestAnimationFrame(restoreScroll)
+                                      requestAnimationFrame(scheduleComments)
+                                    }}
+                                    onLineSelected={(range: SelectedLineRange | null) => {
+                                      const p = path()
+                                      if (!p) return
+                                      file.setSelectedLines(p, range)
+                                      if (!range) setCommenting(null)
+                                    }}
+                                    onLineSelectionEnd={(range: SelectedLineRange | null) => {
+                                      if (!range) {
+                                        setCommenting(null)
+                                        return
+                                      }
+
+                                      setOpenedComment(null)
+                                      setCommenting(range)
+                                    }}
+                                    overflow="scroll"
+                                    class="select-text"
+                                  />
+                                }
+                              >
+                                <Dynamic
+                                  component={editorComponent}
+                                  file={{
+                                    name: path() ?? "",
+                                    contents: editedContent() ?? getSource(),
+                                  }}
+                                  onValueChange={handleEditorValueChange}
+                                  onSave={handleSave}
+                                  class="select-text h-full"
+                                />
+                              </Show>
                               <For each={fileComments()}>
                                 {(comment) => (
                                   <LineCommentView
@@ -3347,7 +3530,7 @@ export default function Page() {
                                 </Match>
                                 <Match when={state()?.loaded && isSvg()}>
                                   <div class="flex flex-col gap-4 px-6 py-4">
-                                    {renderCode(svgContent() ?? "", "")}
+                                    {renderCode(() => svgContent() ?? "", "")}
                                     <Show when={svgPreviewUrl()}>
                                       <div class="flex justify-center pb-40">
                                         <img src={svgPreviewUrl()} alt={path()} class="max-w-full max-h-96" />
@@ -3368,7 +3551,7 @@ export default function Page() {
                                     </div>
                                   </div>
                                 </Match>
-                                <Match when={state()?.loaded}>{renderCode(contents(), "pb-40")}</Match>
+                                <Match when={state()?.loaded}>{renderCode(() => contents(), "pb-40")}</Match>
                                 <Match when={state()?.loading}>
                                   <div class="px-6 py-4 text-text-weak">{language.t("common.loading")}...</div>
                                 </Match>

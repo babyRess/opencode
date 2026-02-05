@@ -274,13 +274,13 @@ export namespace LSP {
     return false
   }
 
-  export async function touchFile(input: string, waitForDiagnostics?: boolean) {
+  export async function touchFile(input: string, waitForDiagnostics?: boolean, content?: string) {
     log.info("touching file", { file: input })
     const clients = await getClients(input)
     await Promise.all(
       clients.map(async (client) => {
         const wait = waitForDiagnostics ? client.waitForDiagnostics({ path: input }) : Promise.resolve()
-        await client.notify.open({ path: input })
+        await client.notify.open({ path: input, content })
         return wait
       }),
     ).catch((err) => {
@@ -452,6 +452,84 @@ export namespace LSP {
       if (!items?.length) return []
       return client.connection.sendRequest("callHierarchy/outgoingCalls", { item: items[0] }).catch(() => [])
     }).then((result) => result.flat().filter(Boolean))
+  }
+
+  export const CompletionItem = z
+    .object({
+      label: z.string(),
+      kind: z.number().optional(),
+      detail: z.string().optional(),
+      documentation: z.union([z.string(), z.object({ kind: z.string(), value: z.string() })]).optional(),
+      sortText: z.string().optional(),
+      filterText: z.string().optional(),
+      insertText: z.string().optional(),
+      insertTextFormat: z.number().optional(),
+    })
+    .meta({
+      ref: "CompletionItem",
+    })
+  export type CompletionItem = z.infer<typeof CompletionItem>
+
+  export async function completion(input: { file: string; line: number; character: number }) {
+    return run(input.file, (client) =>
+      client.connection
+        .sendRequest("textDocument/completion", {
+          textDocument: { uri: pathToFileURL(input.file).href },
+          position: { line: input.line, character: input.character },
+        })
+        .then((result: any) => {
+          // Handle both CompletionList and CompletionItem[] responses
+          if (Array.isArray(result)) return result
+          if (result?.items) return result.items
+          return []
+        })
+        .catch(() => []),
+    ).then((result) => result.flat().filter(Boolean) as CompletionItem[])
+  }
+
+  export const TextEdit = z
+    .object({
+      range: Range,
+      newText: z.string(),
+    })
+    .meta({
+      ref: "TextEdit",
+    })
+  export type TextEdit = z.infer<typeof TextEdit>
+
+  export async function format(input: { file: string; options?: { tabSize?: number; insertSpaces?: boolean } }) {
+    const options = {
+      tabSize: input.options?.tabSize ?? 2,
+      insertSpaces: input.options?.insertSpaces ?? true,
+    }
+    return run(input.file, (client) =>
+      client.connection
+        .sendRequest("textDocument/formatting", {
+          textDocument: { uri: pathToFileURL(input.file).href },
+          options,
+        })
+        .catch(() => []),
+    ).then((result) => result.flat().filter(Boolean) as TextEdit[])
+  }
+
+  export async function formatRange(input: {
+    file: string
+    range: Range
+    options?: { tabSize?: number; insertSpaces?: boolean }
+  }) {
+    const options = {
+      tabSize: input.options?.tabSize ?? 2,
+      insertSpaces: input.options?.insertSpaces ?? true,
+    }
+    return run(input.file, (client) =>
+      client.connection
+        .sendRequest("textDocument/rangeFormatting", {
+          textDocument: { uri: pathToFileURL(input.file).href },
+          range: input.range,
+          options,
+        })
+        .catch(() => []),
+    ).then((result) => result.flat().filter(Boolean) as TextEdit[])
   }
 
   async function runAll<T>(input: (client: LSPClient.Info) => Promise<T>): Promise<T[]> {

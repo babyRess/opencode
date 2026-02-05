@@ -10,7 +10,7 @@ import { useFile } from "@/context/file"
 import { useLanguage } from "@/context/language"
 import { useCommand } from "@/context/command"
 
-export function FileVisual(props: { path: string; active?: boolean }): JSX.Element {
+export function FileVisual(props: { path: string; active?: boolean; dirty?: boolean }): JSX.Element {
   return (
     <div class="flex items-center gap-x-1.5 min-w-0">
       <FileIcon
@@ -21,6 +21,11 @@ export function FileVisual(props: { path: string; active?: boolean }): JSX.Eleme
         }}
       />
       <span class="text-14-medium truncate">{getFilename(props.path)}</span>
+      <Show when={props.dirty}>
+        <span class="text-14-medium text-text-interactive-base shrink-0" title="Unsaved changes">
+          •
+        </span>
+      </Show>
     </div>
   )
 }
@@ -31,6 +36,10 @@ export function SortableTab(props: { tab: string; onTabClose: (tab: string) => v
   const command = useCommand()
   const sortable = createSortable(props.tab)
   const path = createMemo(() => file.pathFromTab(props.tab))
+  const isDirty = createMemo(() => {
+    const p = path()
+    return p ? file.isDirty(p) : false
+  })
   return (
     // @ts-ignore
     <div use:sortable classList={{ "h-full": true, "opacity-0": sortable.isActiveDraggable }}>
@@ -55,7 +64,7 @@ export function SortableTab(props: { tab: string; onTabClose: (tab: string) => v
           hideCloseButton
           onMiddleClick={() => props.onTabClose(props.tab)}
         >
-          <Show when={path()}>{(p) => <FileVisual path={p()} />}</Show>
+          <Show when={path()}>{(p) => <FileVisual path={p()} dirty={isDirty()} />}</Show>
         </Tabs.Trigger>
       </div>
     </div>

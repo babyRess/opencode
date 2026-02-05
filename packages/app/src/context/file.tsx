@@ -330,6 +330,28 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       file: {},
     })
 
+    // Track dirty (unsaved) files
+    const [dirtyFiles, setDirtyFiles] = createStore<Record<string, boolean>>({})
+
+    const isDirty = (input: string) => {
+      const path = normalize(input)
+      return dirtyFiles[path] ?? false
+    }
+
+    const setDirty = (input: string, dirty: boolean) => {
+      const path = normalize(input)
+      if (dirty) {
+        setDirtyFiles(path, true)
+      } else {
+        setDirtyFiles(path, undefined as unknown as boolean)
+      }
+    }
+
+    const clearDirty = (input: string) => {
+      const path = normalize(input)
+      setDirtyFiles(path, undefined as unknown as boolean)
+    }
+
     const [tree, setTree] = createStore<{
       node: Record<string, FileNode>
       dir: Record<string, DirectoryState>
@@ -722,6 +744,9 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       setSelectedLines,
       searchFiles: (query: string) => search(query, "false"),
       searchFilesAndDirectories: (query: string) => search(query, "true"),
+      isDirty,
+      setDirty,
+      clearDirty,
     }
   },
 })

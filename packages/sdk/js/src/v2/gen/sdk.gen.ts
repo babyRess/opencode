@@ -30,6 +30,7 @@ import type {
   FilePartSource,
   FileReadResponses,
   FileStatusResponses,
+  FileWriteResponses,
   FindFilesResponses,
   FindSymbolsResponses,
   FindTextResponses,
@@ -41,6 +42,14 @@ import type {
   GlobalEventResponses,
   GlobalHealthResponses,
   InstanceDisposeResponses,
+  LspCompletionErrors,
+  LspCompletionResponses,
+  LspDiagnosticsErrors,
+  LspDiagnosticsResponses,
+  LspFormatErrors,
+  LspFormatRangeErrors,
+  LspFormatRangeResponses,
+  LspFormatResponses,
   LspStatusResponses,
   McpAddErrors,
   McpAddResponses,
@@ -96,6 +105,7 @@ import type {
   QuestionRejectResponses,
   QuestionReplyErrors,
   QuestionReplyResponses,
+  Range,
   SessionAbortErrors,
   SessionAbortResponses,
   SessionChildrenErrors,
@@ -2321,6 +2331,43 @@ export class File extends HeyApiClient {
   }
 
   /**
+   * Write file
+   *
+   * Write content to a specified file.
+   */
+  public write<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      path?: string
+      content?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "path" },
+            { in: "body", key: "content" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<FileWriteResponses, unknown, ThrowOnError>({
+      url: "/file/content",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Get file status
    *
    * Get the git status of all files in the project.
@@ -3130,6 +3177,159 @@ export class Lsp extends HeyApiClient {
     const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
     return (options?.client ?? this.client).get<LspStatusResponses, unknown, ThrowOnError>({
       url: "/lsp",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get completions
+   *
+   * Get code completions at a position in a file
+   */
+  public completion<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      file?: string
+      line?: number
+      character?: number
+      content?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "file" },
+            { in: "body", key: "line" },
+            { in: "body", key: "character" },
+            { in: "body", key: "content" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<LspCompletionResponses, LspCompletionErrors, ThrowOnError>({
+      url: "/lsp/completion",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Format document
+   *
+   * Format an entire document using LSP
+   */
+  public format<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      file?: string
+      options?: {
+        tabSize?: number
+        insertSpaces?: boolean
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "file" },
+            { in: "body", key: "options" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<LspFormatResponses, LspFormatErrors, ThrowOnError>({
+      url: "/lsp/format",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Format range
+   *
+   * Format a range within a document using LSP
+   */
+  public formatRange<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      file?: string
+      range?: Range
+      options?: {
+        tabSize?: number
+        insertSpaces?: boolean
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "file" },
+            { in: "body", key: "range" },
+            { in: "body", key: "options" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<LspFormatRangeResponses, LspFormatRangeErrors, ThrowOnError>({
+      url: "/lsp/format-range",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get diagnostics
+   *
+   * Get diagnostics for a file
+   */
+  public diagnostics<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      file: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "file" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<LspDiagnosticsResponses, LspDiagnosticsErrors, ThrowOnError>({
+      url: "/lsp/diagnostics",
       ...options,
       ...params,
     })

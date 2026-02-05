@@ -4336,6 +4336,62 @@
             "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.file.read({\n  ...\n})"
           }
         ]
+      },
+      "post": {
+        "operationId": "file.write",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Write file",
+        "description": "Write content to a specified file.",
+        "responses": {
+          "200": {
+            "description": "Write result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  }
+                },
+                "required": ["path", "content"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.file.write({\n  ...\n})"
+          }
+        ]
       }
     },
     "/file/status": {
@@ -5780,6 +5836,313 @@
         ]
       }
     },
+    "/lsp/completion": {
+      "post": {
+        "operationId": "lsp.completion",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get completions",
+        "description": "Get code completions at a position in a file",
+        "responses": {
+          "200": {
+            "description": "Completion items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompletionItem"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "description": "File path",
+                    "type": "string"
+                  },
+                  "line": {
+                    "description": "Line number (0-indexed)",
+                    "type": "number"
+                  },
+                  "character": {
+                    "description": "Character position (0-indexed)",
+                    "type": "number"
+                  },
+                  "content": {
+                    "description": "Current editor content for LSP sync",
+                    "type": "string"
+                  }
+                },
+                "required": ["file", "line", "character"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.lsp.completion({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/lsp/format": {
+      "post": {
+        "operationId": "lsp.format",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Format document",
+        "description": "Format an entire document using LSP",
+        "responses": {
+          "200": {
+            "description": "Text edits to apply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TextEdit"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "description": "File path",
+                    "type": "string"
+                  },
+                  "options": {
+                    "type": "object",
+                    "properties": {
+                      "tabSize": {
+                        "type": "number"
+                      },
+                      "insertSpaces": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.lsp.format({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/lsp/format-range": {
+      "post": {
+        "operationId": "lsp.formatRange",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Format range",
+        "description": "Format a range within a document using LSP",
+        "responses": {
+          "200": {
+            "description": "Text edits to apply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TextEdit"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "description": "File path",
+                    "type": "string"
+                  },
+                  "range": {
+                    "$ref": "#/components/schemas/Range"
+                  },
+                  "options": {
+                    "type": "object",
+                    "properties": {
+                      "tabSize": {
+                        "type": "number"
+                      },
+                      "insertSpaces": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "required": ["file", "range"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.lsp.formatRange({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/lsp/diagnostics": {
+      "get": {
+        "operationId": "lsp.diagnostics",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "file",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "File path"
+          }
+        ],
+        "summary": "Get diagnostics",
+        "description": "Get diagnostics for a file",
+        "responses": {
+          "200": {
+            "description": "Diagnostics for the file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "range": {
+                        "$ref": "#/components/schemas/Range"
+                      },
+                      "message": {
+                        "type": "string"
+                      },
+                      "severity": {
+                        "type": "number"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "code": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["range", "message"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.lsp.diagnostics({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/formatter": {
       "get": {
         "operationId": "formatter.status",
@@ -6047,6 +6410,41 @@
           "properties": {
             "type": "object",
             "properties": {}
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.file.watcher.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "file.watcher.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "event": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "add"
+                  },
+                  {
+                    "type": "string",
+                    "const": "change"
+                  },
+                  {
+                    "type": "string",
+                    "const": "unlink"
+                  }
+                ]
+              }
+            },
+            "required": ["file", "event"]
           }
         },
         "required": ["type", "properties"]
@@ -7591,41 +7989,6 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.file.watcher.updated": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "file.watcher.updated"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "file": {
-                "type": "string"
-              },
-              "event": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "const": "add"
-                  },
-                  {
-                    "type": "string",
-                    "const": "change"
-                  },
-                  {
-                    "type": "string",
-                    "const": "unlink"
-                  }
-                ]
-              }
-            },
-            "required": ["file", "event"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
       "Todo": {
         "type": "object",
         "properties": {
@@ -8300,6 +8663,9 @@
             "$ref": "#/components/schemas/Event.lsp.updated"
           },
           {
+            "$ref": "#/components/schemas/Event.file.watcher.updated"
+          },
+          {
             "$ref": "#/components/schemas/Event.file.edited"
           },
           {
@@ -8337,9 +8703,6 @@
           },
           {
             "$ref": "#/components/schemas/Event.session.compacted"
-          },
-          {
-            "$ref": "#/components/schemas/Event.file.watcher.updated"
           },
           {
             "$ref": "#/components/schemas/Event.todo.updated"
@@ -10914,6 +11277,64 @@
           }
         },
         "required": ["id", "name", "root", "status"]
+      },
+      "CompletionItem": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "number"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "documentation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind", "value"]
+              }
+            ]
+          },
+          "sortText": {
+            "type": "string"
+          },
+          "filterText": {
+            "type": "string"
+          },
+          "insertText": {
+            "type": "string"
+          },
+          "insertTextFormat": {
+            "type": "number"
+          }
+        },
+        "required": ["label"]
+      },
+      "TextEdit": {
+        "type": "object",
+        "properties": {
+          "range": {
+            "$ref": "#/components/schemas/Range"
+          },
+          "newText": {
+            "type": "string"
+          }
+        },
+        "required": ["range", "newText"]
       },
       "FormatterStatus": {
         "type": "object",

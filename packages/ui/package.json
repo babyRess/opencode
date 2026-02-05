@@ -39,6 +39,18 @@
     "vite-plugin-solid": "catalog:"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "6.18.4",
+    "@codemirror/commands": "6.8.0",
+    "@codemirror/lang-css": "6.3.1",
+    "@codemirror/lang-html": "6.4.9",
+    "@codemirror/lang-javascript": "6.2.4",
+    "@codemirror/lang-json": "6.0.1",
+    "@codemirror/lang-markdown": "6.3.2",
+    "@codemirror/language": "6.11.0",
+    "@codemirror/lint": "6.8.4",
+    "@codemirror/merge": "6.10.2",
+    "@codemirror/state": "6.5.2",
+    "@codemirror/view": "6.36.5",
     "@kobalte/core": "catalog:",
     "@opencode-ai/sdk": "workspace:*",
     "@opencode-ai/util": "workspace:*",
@@ -62,6 +74,7 @@
     "solid-js": "catalog:",
     "solid-list": "catalog:",
     "strip-ansi": "7.1.2",
-    "virtua": "catalog:"
+    "virtua": "catalog:",
+    "solid-codemirror": "2.3.1"
   }
 }

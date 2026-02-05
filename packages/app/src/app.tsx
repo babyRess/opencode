@@ -6,9 +6,11 @@ import { Font } from "@opencode-ai/ui/font"
 import { MarkedProvider } from "@opencode-ai/ui/context/marked"
 import { DiffComponentProvider } from "@opencode-ai/ui/context/diff"
 import { CodeComponentProvider } from "@opencode-ai/ui/context/code"
+import { EditorComponentProvider } from "@opencode-ai/ui/context/editor"
 import { I18nProvider } from "@opencode-ai/ui/context"
 import { Diff } from "@opencode-ai/ui/diff"
 import { Code } from "@opencode-ai/ui/code"
+import { Editor } from "@opencode-ai/ui/editor"
 import { ThemeProvider } from "@opencode-ai/ui/theme"
 import { GlobalSyncProvider } from "@/context/global-sync"
 import { PermissionProvider } from "@/context/permission"
@@ -63,7 +65,9 @@ export function AppBaseProviders(props: ParentProps) {
               <DialogProvider>
                 <MarkedProviderWithNativeParser>
                   <DiffComponentProvider component={Diff}>
-                    <CodeComponentProvider component={Code}>{props.children}</CodeComponentProvider>
+                    <CodeComponentProvider component={Code}>
+                      <EditorComponentProvider component={Editor}>{props.children}</EditorComponentProvider>
+                    </CodeComponentProvider>
                   </DiffComponentProvider>
                 </MarkedProviderWithNativeParser>
               </DialogProvider>

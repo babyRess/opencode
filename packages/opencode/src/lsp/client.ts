@@ -110,6 +110,22 @@ export namespace LSPClient {
             publishDiagnostics: {
               versionSupport: true,
             },
+            completion: {
+              completionItem: {
+                snippetSupport: true,
+                commitCharactersSupport: true,
+                documentationFormat: ["markdown", "plaintext"],
+                deprecatedSupport: true,
+                preselectSupport: true,
+              },
+              contextSupport: true,
+            },
+            formatting: {
+              dynamicRegistration: true,
+            },
+            rangeFormatting: {
+              dynamicRegistration: true,
+            },
           },
         },
       }),
@@ -145,10 +161,10 @@ export namespace LSPClient {
         return connection
       },
       notify: {
-        async open(input: { path: string }) {
+        async open(input: { path: string; content?: string }) {
           input.path = path.isAbsolute(input.path) ? input.path : path.resolve(Instance.directory, input.path)
-          const file = Bun.file(input.path)
-          const text = await file.text()
+          // Use provided content or read from disk
+          const text = input.content ?? (await Bun.file(input.path).text())
           const extension = path.extname(input.path)
           const languageId = LANGUAGE_EXTENSIONS[extension] ?? "plaintext"
 
